@@ -124,32 +124,24 @@ https://你的域名/#/register?code=邀请码
 
 ### VLESS 与 V2bX
 
-后台 `#/vless` 可以新增独立 VLESS 节点，不影响现有 VMess。节点端 V2bX 的 `NodeType` 必须是 `vless`，`NodeID` 必须填 VLESS 节点 ID，`ApiKey` 使用 `.env` 的全局 `SERVER_TOKEN`。
+后台“节点管理”中的 `VLESS 节点`入口可以新增独立 VLESS 节点，不影响现有 VMess、Trojan。节点端 V2bX 的 `NodeType` 必须是 `vless`，`NodeID` 必须填 VLESS 节点 ID，`ApiKey` 使用 `.env` 的全局 `SERVER_TOKEN`。
 
 VLESS、Reality、V2bX、Telegram 的完整字段说明分别位于仓库文件：`docs/VLESS.md`、`docs/V2BX_VLESS.md`、`docs/TELEGRAM_LOGIN.md`。
 
 ## 更新
 
-首次安装完成并正常运行后，不要重新 clone、不要覆盖 `.env`。每次更新按下面顺序操作。
+首次安装完成并正常运行后，不要覆盖 `.env`。更新不要求服务器目录是 Git 仓库，也不要求保留旧版 `update.sh`。
 
 ### 更新前检查与备份
 
 ```bash
 cd /www/wwwroot/jwboard
-cat VERSION
-git status --short
-```
-
-`git status --short` 没有输出才可以继续。然后备份数据库、`.env`、`storage/` 与 `config/theme/`。确认本地存在 `composer.lock`；该文件由首次 `init.sh` 生成，不能删除。
-
-### 执行更新
-
-```bash
-cd /www/wwwroot/jwboard
+curl -fL https://github.com/xiaoqiqixi/jwboard/releases/latest/download/update.sh -o update.sh
+chmod +x update.sh
 PHP_BIN=/www/server/php/74/bin/php ./update.sh
 ```
 
-更新脚本会检查 PHP 7.4、当前代码是否有本地修改和 `composer.lock`，然后快进拉取 GitHub 的 `main`、执行 `composer install`、数据库版本更新、配置缓存刷新和 Horizon 重启。它不会执行 `git reset --hard`、不会修改 `.env`、不会执行 `composer update`。
+更新前仍应备份数据库、`.env`、`storage/` 与 `config/theme/`。脚本会读取 GitHub 最新正式 Release，比较本地与发布版本，下载发布包、执行 `composer install`、数据库版本更新、配置缓存刷新和 Horizon 重启。它不会要求 Git、不会执行 `git reset --hard`、不会修改 `.env`、不会执行 `composer update`。
 
 ### 版本迁移规则
 
@@ -176,9 +168,9 @@ cat VERSION
 
 ### 常见停止原因
 
-- `composer.lock is missing`：服务器未完成首次安装或锁文件被删除。不要运行 `composer update`；恢复首次安装生成的锁文件后重试。
-- `The working tree has local changes`：服务器上改过源代码。先备份并提交自己的改动，不能强制覆盖。
-- `Local history has diverged`：服务器分支与 GitHub 都有各自提交。保留备份，在新目录 clone 后先测试，不要直接强制更新。
+- 无法下载 Release：确认服务器能访问 `api.github.com` 和 `github.com`，并检查当前 Release 已上传 `update.sh` 资产。
+- `composer` 不存在：脚本会自动下载 `composer.phar`；若服务器也无法访问 Composer 官网，请预先将 `composer.phar` 放入项目根目录。
+- 本地修改过程序文件：Release 更新会覆盖程序文件；将自定义代码移入主题自定义配置或单独备份后再更新。
 - 数据库迁移失败：查看终端报错；该迁移不会写入完成记录。处理后再次运行同一个 `./update.sh` 即可。
 
 更新教程的独立副本位于 `docs/UPDATE.md`，方便只分发运维文档；README 与该文件遵循相同的更新规则。
@@ -200,7 +192,7 @@ JWBoard 使用 `主版本.次版本.修订版本`：
 - 修复问题时升级修订版本，例如 `1.0.1`；
 - 破坏现有部署兼容性时才升级主版本，例如 `2.0.0`。
 
-每次发布必须同步更新 `VERSION`、`CHANGELOG.md`、必要的数据库升级 SQL，并创建对应 Git 标签，例如 `jwboard1.0.2`。推送标签时只推送当前标签，例如 `git push origin jwboard1.0.2`，不要使用 `git push --tags`。
+每次发布必须同步更新 `VERSION`、`CHANGELOG.md`、必要的数据库升级 SQL，并创建对应 Git 标签和 GitHub Release，例如 `jwboard1.0.2`。Release 标题使用 `JWBoard 1.0.2`，正文必须列出新增、修复、数据库影响与部署注意事项，并上传当前 `update.sh` 为名为 `update.sh` 的 Release 资产。不要使用 `git push --tags`。
 
 ## 许可
 
