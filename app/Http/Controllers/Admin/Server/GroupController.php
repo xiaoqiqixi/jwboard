@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\ServerShadowsocks;
 use App\Models\ServerTrojan;
 use App\Models\ServerVmess;
+use App\Models\ServerVless;
 use App\Models\ServerGroup;
 use App\Models\User;
 use App\Services\ServerService;
@@ -65,7 +66,7 @@ class GroupController extends Controller
             }
         }
 
-        $servers = ServerVmess::all();
+        $servers = ServerVmess::all()->concat(ServerVless::all());
         foreach ($servers as $server) {
             if (in_array($request->input('id'), $server->group_id)) {
                 abort(500, '该组已被节点所使用，无法删除');

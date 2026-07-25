@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Client\Protocols;
 
 use Symfony\Component\Yaml\Yaml;
+use App\Utils\Vless;
 
 class Stash
 {
@@ -20,7 +21,7 @@ class Stash
     {
         $servers = $this->servers;
         $user = $this->user;
-        $appName = config('v2board.app_name', 'V2Board');
+        $appName = config('v2board.app_name', 'JWBoard');
         header("subscription-userinfo: upload={$user['u']}; download={$user['d']}; total={$user['transfer_enable']}; expire={$user['expired_at']}");
         header('profile-update-interval: 24');
         header("content-disposition: filename*=UTF-8''".rawurlencode($appName));
@@ -49,6 +50,10 @@ class Stash
             }
             if ($item['type'] === 'vmess') {
                 array_push($proxy, self::buildVmess($user['uuid'], $item));
+                array_push($proxies, $item['name']);
+            }
+            if ($item['type'] === 'vless') {
+                array_push($proxy, Vless::clash($user['uuid'], $item));
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'trojan') {
@@ -86,7 +91,7 @@ class Stash
         }
 
         $yaml = Yaml::dump($config, 2, 4, Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
-        $yaml = str_replace('$app_name', config('v2board.app_name', 'V2Board'), $yaml);
+        $yaml = str_replace('$app_name', config('v2board.app_name', 'JWBoard'), $yaml);
         return $yaml;
     }
 

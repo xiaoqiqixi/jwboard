@@ -49,7 +49,7 @@ class DeepbworkController extends Controller
         foreach ($users as $user) {
             $user->v2ray_user = [
                 "uuid" => $user->uuid,
-                "email" => sprintf("%s@v2board.user", $user->uuid),
+                "email" => sprintf("%s@jwboard.user", $user->uuid),
                 "alter_id" => 0,
                 "level" => 0,
             ];

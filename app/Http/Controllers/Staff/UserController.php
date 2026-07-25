@@ -74,7 +74,7 @@ class UserController extends Controller
                 'subject' => $request->input('subject'),
                 'template_name' => 'notify',
                 'template_value' => [
-                    'name' => config('v2board.app_name', 'V2Board'),
+                    'name' => config('v2board.app_name', 'JWBoard'),
                     'url' => config('v2board.app_url'),
                     'content' => $request->input('content')
                 ]

@@ -8,9 +8,11 @@ use App\Models\ServerRoute;
 use App\Models\ServerShadowsocks;
 use App\Models\User;
 use App\Models\ServerVmess;
+use App\Models\ServerVless;
 use App\Models\ServerTrojan;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
+use App\Utils\Vless;
 use Illuminate\Support\Facades\Cache;
 
 class ServerService
@@ -37,6 +39,26 @@ class ServerService
         }
 
 
+        return $servers;
+    }
+
+    public function getAvailableVless(User $user): array
+    {
+        $servers = [];
+        $vless = ServerVless::orderBy('sort', 'ASC')->get();
+        foreach ($vless as $key => $server) {
+            if (!$server['show'] || !in_array($user->group_id, $server['group_id'])) continue;
+            $vless[$key]['type'] = 'vless';
+            if (strpos($vless[$key]['port'], '-') !== false) {
+                $vless[$key]['port'] = Helper::randomPort($vless[$key]['port']);
+            }
+            $checkId = $vless[$key]['parent_id'] ?: $vless[$key]['id'];
+            $vless[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VLESS_LAST_CHECK_AT', $checkId));
+            $data = $vless[$key]->toArray();
+            $data['realitySettings'] = Vless::clientRealitySettings($data['realitySettings'] ?? []);
+            unset($data['token']);
+            $servers[] = $data;
+        }
         return $servers;
     }
 
@@ -112,6 +134,7 @@ class ServerService
         $servers = array_merge(
             $this->getAvailableShadowsocks($user),
             $this->getAvailableVmess($user),
+            $this->getAvailableVless($user),
             $this->getAvailableTrojan($user),
             $this->getAvailableHysteria($user)
         );
@@ -196,6 +219,15 @@ class ServerService
         return $servers;
     }
 
+    public function getAllVless()
+    {
+        $servers = ServerVless::orderBy('sort', 'ASC')->get()->toArray();
+        foreach ($servers as $k => $server) {
+            $servers[$k]['type'] = 'vless';
+        }
+        return $servers;
+    }
+
     public function getAllTrojan()
     {
         $servers = ServerTrojan::orderBy('sort', 'ASC')
@@ -240,6 +272,7 @@ class ServerService
         $servers = array_merge(
             $this->getAllShadowsocks(),
             $this->getAllVMess(),
+            $this->getAllVless(),
             $this->getAllTrojan(),
             $this->getAllHysteria()
         );
@@ -266,6 +299,8 @@ class ServerService
         switch ($serverType) {
             case 'vmess':
                 return ServerVmess::find($serverId);
+            case 'vless':
+                return ServerVless::find($serverId);
             case 'shadowsocks':
                 return ServerShadowsocks::find($serverId);
             case 'trojan':

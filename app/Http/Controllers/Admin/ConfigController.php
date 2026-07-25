@@ -40,11 +40,11 @@ class ConfigController extends Controller
     {
         $obj = new SendEmailJob([
             'email' => $request->user['email'],
-            'subject' => 'This is v2board test email',
+            'subject' => 'This is JWBoard test email',
             'template_name' => 'notify',
             'template_value' => [
-                'name' => config('v2board.app_name', 'V2Board'),
-                'content' => 'This is v2board test email',
+                'name' => config('v2board.app_name', 'JWBoard'),
+                'content' => 'This is JWBoard test email',
                 'url' => config('v2board.app_url')
             ]
         ]);
@@ -88,8 +88,8 @@ class ConfigController extends Controller
                 'logo' => config('v2board.logo'),
                 'force_https' => (int)config('v2board.force_https', 0),
                 'stop_register' => (int)config('v2board.stop_register', 0),
-                'app_name' => config('v2board.app_name', 'V2Board'),
-                'app_description' => config('v2board.app_description', 'V2Board is best!'),
+                'app_name' => config('v2board.app_name', 'JWBoard'),
+                'app_description' => config('v2board.app_description', 'JWBoard proxy service platform'),
                 'app_url' => config('v2board.app_url'),
                 'subscribe_url' => config('v2board.subscribe_url'),
                 'try_out_plan_id' => (int)config('v2board.try_out_plan_id', 0),
@@ -108,7 +108,7 @@ class ConfigController extends Controller
                 'show_info_to_server_enable' => (int)config('v2board.show_info_to_server_enable', 0)
             ],
             'frontend' => [
-                'frontend_theme' => config('v2board.frontend_theme', 'v2board'),
+                'frontend_theme' => config('v2board.frontend_theme', 'nova'),
                 'frontend_theme_sidebar' => config('v2board.frontend_theme_sidebar', 'light'),
                 'frontend_theme_header' => config('v2board.frontend_theme_header', 'dark'),
                 'frontend_theme_color' => config('v2board.frontend_theme_color', 'default'),
@@ -148,9 +148,8 @@ class ConfigController extends Controller
                 'email_whitelist_enable' => (int)config('v2board.email_whitelist_enable', 0),
                 'email_whitelist_suffix' => config('v2board.email_whitelist_suffix', Dict::EMAIL_WHITELIST_SUFFIX_DEFAULT),
                 'email_gmail_limit_enable' => config('v2board.email_gmail_limit_enable', 0),
-                'recaptcha_enable' => (int)config('v2board.recaptcha_enable', 0),
-                'recaptcha_key' => config('v2board.recaptcha_key'),
-                'recaptcha_site_key' => config('v2board.recaptcha_site_key'),
+                'turnstile_enable' => (bool)config('services.turnstile.enabled'),
+                'turnstile_site_key' => config('services.turnstile.site_key'),
                 'register_limit_by_ip_enable' => (int)config('v2board.register_limit_by_ip_enable', 0),
                 'register_limit_count' => config('v2board.register_limit_count', 3),
                 'register_limit_expire' => config('v2board.register_limit_expire', 60),

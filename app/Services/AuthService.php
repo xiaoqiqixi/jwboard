@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
@@ -22,15 +21,18 @@ class AuthService
     public function generateAuthData(Request $request)
     {
         $guid = Helper::guid();
+        $expiresIn = max(300, (int) config('services.auth.jwt_expire_seconds', 86400));
         $authData = JWT::encode([
             'id' => $this->user->id,
             'session' => $guid,
+            'iat' => time(),
+            'exp' => time() + $expiresIn,
         ], config('app.key'), 'HS256');
         self::addSession($this->user->id, $guid, [
             'ip' => $request->ip(),
             'login_at' => time(),
             'ua' => $request->userAgent()
-        ]);
+        ], $expiresIn);
         return [
             'token' => $this->user->token,
             'is_admin' => $this->user->is_admin,
@@ -42,7 +44,7 @@ class AuthService
     {
         try {
             if (!Cache::has($jwt)) {
-                $data = (array)JWT::decode($jwt, new Key(config('app.key'), 'HS256'));
+                $data = (array)JWT::decode($jwt, config('app.key'), ['HS256']);
                 if (!self::checkSession($data['id'], $data['session'])) return false;
                 $user = User::select([
                     'id',
@@ -67,14 +69,15 @@ class AuthService
         return true;
     }
 
-    private static function addSession($userId, $guid, $meta)
+    private static function addSession($userId, $guid, $meta, int $expiresIn)
     {
         $cacheKey = CacheKey::get("USER_SESSIONS", $userId);
         $sessions = (array)Cache::get($cacheKey, []);
         $sessions[$guid] = $meta;
         if (!Cache::put(
             $cacheKey,
-            $sessions
+            $sessions,
+            $expiresIn
         )) return false;
         return true;
     }

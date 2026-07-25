@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Client\Protocols;
 
+use App\Utils\Vless;
 class SagerNet
 {
     public $flag = 'sagernet';
@@ -23,6 +24,9 @@ class SagerNet
         foreach ($servers as $item) {
             if ($item['type'] === 'vmess') {
                 $uri .= self::buildVmess($user['uuid'], $item);
+            }
+            if ($item['type'] === 'vless') {
+                $uri .= Vless::uri($user['uuid'], $item);
             }
             if ($item['type'] === 'shadowsocks') {
                 $uri .= self::buildShadowsocks($user['uuid'], $item);

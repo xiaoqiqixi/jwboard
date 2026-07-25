@@ -10,13 +10,12 @@ use App\Jobs\SendEmailJob;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Plan;
 use App\Models\User;
-use App\Models\InviteCode;
 use App\Utils\Helper;
 use App\Utils\Dict;
 use App\Utils\CacheKey;
-use ReCaptcha\ReCaptcha;
+use App\Services\TurnstileService;
+use App\Services\RegistrationService;
 
 class AuthController extends Controller
 {
@@ -57,11 +56,11 @@ class AuthController extends Controller
         SendEmailJob::dispatch([
             'email' => $user->email,
             'subject' => __('Login to :name', [
-                'name' => config('v2board.app_name', 'V2Board')
+                'name' => config('v2board.app_name', 'JWBoard')
             ]),
             'template_name' => 'login',
             'template_value' => [
-                'name' => config('v2board.app_name', 'V2Board'),
+                'name' => config('v2board.app_name', 'JWBoard'),
                 'link' => $link,
                 'url' => config('v2board.app_url')
             ]
@@ -83,12 +82,8 @@ class AuthController extends Controller
                 ]));
             }
         }
-        if ((int)config('v2board.recaptcha_enable', 0)) {
-            $recaptcha = new ReCaptcha(config('v2board.recaptcha_key'));
-            $recaptchaResp = $recaptcha->verify($request->input('recaptcha_data'));
-            if (!$recaptchaResp->isSuccess()) {
-                abort(500, __('Invalid code is incorrect'));
-            }
+        if (!(new TurnstileService())->verify($request->input('turnstile_token'), $request->ip())) {
+            abort(500, 'Cloudflare Turnstile verification failed');
         }
         if ((int)config('v2board.email_whitelist_enable', 0)) {
             if (!Helper::emailSuffixVerify(
@@ -106,11 +101,6 @@ class AuthController extends Controller
         }
         if ((int)config('v2board.stop_register', 0)) {
             abort(500, __('Registration has closed'));
-        }
-        if ((int)config('v2board.invite_force', 0)) {
-            if (empty($request->input('invite_code'))) {
-                abort(500, __('You must use the invitation code to register'));
-            }
         }
         if ((int)config('v2board.email_verify', 0)) {
             if (empty($request->input('email_code'))) {
@@ -131,34 +121,9 @@ class AuthController extends Controller
         $user->password = password_hash($password, PASSWORD_DEFAULT);
         $user->uuid = Helper::guid(true);
         $user->token = Helper::guid();
-        if ($request->input('invite_code')) {
-            $inviteCode = InviteCode::where('code', $request->input('invite_code'))
-                ->where('status', 0)
-                ->first();
-            if (!$inviteCode) {
-                if ((int)config('v2board.invite_force', 0)) {
-                    abort(500, __('Invalid invitation code'));
-                }
-            } else {
-                $user->invite_user_id = $inviteCode->user_id ? $inviteCode->user_id : null;
-                if (!(int)config('v2board.invite_never_expire', 0)) {
-                    $inviteCode->status = 1;
-                    $inviteCode->save();
-                }
-            }
-        }
-
-        // try out
-        if ((int)config('v2board.try_out_plan_id', 0)) {
-            $plan = Plan::find(config('v2board.try_out_plan_id'));
-            if ($plan) {
-                $user->transfer_enable = $plan->transfer_enable * 1073741824;
-                $user->plan_id = $plan->id;
-                $user->group_id = $plan->group_id;
-                $user->expired_at = time() + (config('v2board.try_out_hour', 1) * 3600);
-                $user->speed_limit = $plan->speed_limit;
-            }
-        }
+        $registrationService = new RegistrationService();
+        $registrationService->applyInvite($user, $request->input('invite_code'));
+        $registrationService->applyTryOut($user);
 
         if (!$user->save()) {
             abort(500, __('Register failed'));

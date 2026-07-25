@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Client\Protocols;
 
+use App\Utils\Vless;
 use App\Utils\Helper;
 
 class Shadowrocket
@@ -34,6 +35,9 @@ class Shadowrocket
             }
             if ($item['type'] === 'vmess') {
                 $uri .= self::buildVmess($user['uuid'], $item);
+            }
+            if ($item['type'] === 'vless') {
+                $uri .= Vless::uri($user['uuid'], $item);
             }
             if ($item['type'] === 'trojan') {
                 $uri .= self::buildTrojan($user['uuid'], $item);

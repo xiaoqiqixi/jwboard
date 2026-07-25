@@ -1,0 +1,26 @@
+-- Apply once to an existing JWBoard installation before enabling VLESS.
+CREATE TABLE IF NOT EXISTS `v2_server_vless` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `group_id` varchar(255) NOT NULL,
+    `route_id` varchar(255) DEFAULT NULL,
+    `name` varchar(255) NOT NULL,
+    `parent_id` int(11) DEFAULT NULL,
+    `host` varchar(255) NOT NULL,
+    `port` varchar(11) NOT NULL,
+    `server_port` int(11) NOT NULL,
+    `security` varchar(16) NOT NULL DEFAULT 'tls',
+    `flow` varchar(64) DEFAULT NULL,
+    `tags` varchar(255) DEFAULT NULL,
+    `rate` varchar(11) NOT NULL,
+    `network` varchar(11) NOT NULL,
+    `networkSettings` text,
+    `tlsSettings` text,
+    `realitySettings` text,
+    `ruleSettings` text,
+    `dnsSettings` text,
+    `show` tinyint(1) NOT NULL DEFAULT '0',
+    `sort` int(11) DEFAULT NULL,
+    `created_at` int(11) NOT NULL,
+    `updated_at` int(11) NOT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='VLESS服务器表';

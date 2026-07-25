@@ -21,10 +21,10 @@ Route::get('/', function (Request $request) {
         }
     }
     $renderParams = [
-        'title' => config('v2board.app_name', 'V2Board'),
-        'theme' => config('v2board.frontend_theme', 'v2board'),
+        'title' => config('v2board.app_name', 'JWBoard'),
+        'theme' => config('v2board.frontend_theme', 'nova'),
         'version' => config('app.version'),
-        'description' => config('v2board.app_description', 'V2Board is best'),
+        'description' => config('v2board.app_description', 'JWBoard proxy service platform'),
         'logo' => config('v2board.logo')
     ];
 
@@ -33,14 +33,14 @@ Route::get('/', function (Request $request) {
         $themeService->init();
     }
 
-    $renderParams['theme_config'] = config('theme.' . config('v2board.frontend_theme', 'v2board'));
-    return view('theme::' . config('v2board.frontend_theme', 'v2board') . '.dashboard', $renderParams);
+    $renderParams['theme_config'] = config('theme.' . config('v2board.frontend_theme', 'nova'));
+    return view('theme::' . config('v2board.frontend_theme', 'nova') . '.dashboard', $renderParams);
 });
 
 //TODO:: 兼容
 Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))), function () {
     return view('admin', [
-        'title' => config('v2board.app_name', 'V2Board'),
+        'title' => config('v2board.app_name', 'JWBoard'),
         'theme_sidebar' => config('v2board.frontend_theme_sidebar', 'light'),
         'theme_header' => config('v2board.frontend_theme_header', 'dark'),
         'theme_color' => config('v2board.frontend_theme_color', 'default'),

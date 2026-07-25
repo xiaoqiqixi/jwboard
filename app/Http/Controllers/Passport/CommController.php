@@ -13,7 +13,7 @@ use App\Jobs\SendEmailJob;
 use App\Models\InviteCode;
 use App\Utils\Dict;
 use App\Utils\CacheKey;
-use ReCaptcha\ReCaptcha;
+use App\Services\TurnstileService;
 
 class CommController extends Controller
 {
@@ -26,26 +26,22 @@ class CommController extends Controller
 
     public function sendEmailVerify(CommSendEmailVerify $request)
     {
-        if ((int)config('v2board.recaptcha_enable', 0)) {
-            $recaptcha = new ReCaptcha(config('v2board.recaptcha_key'));
-            $recaptchaResp = $recaptcha->verify($request->input('recaptcha_data'));
-            if (!$recaptchaResp->isSuccess()) {
-                abort(500, __('Invalid code is incorrect'));
-            }
+        if (!(new TurnstileService())->verify($request->input('turnstile_token'), $request->ip())) {
+            abort(500, 'Cloudflare Turnstile verification failed');
         }
         $email = $request->input('email');
         if (Cache::get(CacheKey::get('LAST_SEND_EMAIL_VERIFY_TIMESTAMP', $email))) {
             abort(500, __('Email verification code has been sent, please request again later'));
         }
         $code = rand(100000, 999999);
-        $subject = config('v2board.app_name', 'V2Board') . __('Email verification code');
+        $subject = config('v2board.app_name', 'JWBoard') . __('Email verification code');
 
         SendEmailJob::dispatch([
             'email' => $email,
             'subject' => $subject,
             'template_name' => 'verify',
             'template_value' => [
-                'name' => config('v2board.app_name', 'V2Board'),
+                'name' => config('v2board.app_name', 'JWBoard'),
                 'code' => $code,
                 'url' => config('v2board.app_url')
             ]

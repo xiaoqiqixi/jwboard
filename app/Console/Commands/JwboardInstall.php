@@ -8,21 +8,21 @@ use App\Models\User;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\DB;
 
-class V2boardInstall extends Command
+class JwboardInstall extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'v2board:install';
+    protected $signature = 'jwboard:install';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'v2board 安装';
+    protected $description = 'JWBoard 安装';
 
     /**
      * Create a new command instance.

@@ -12,14 +12,14 @@ use App\Models\Stat;
 use App\Models\CommissionLog;
 use Illuminate\Support\Facades\DB;
 
-class V2boardStatistics extends Command
+class JwboardStatistics extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'v2board:statistics';
+    protected $signature = 'jwboard:statistics';
 
     /**
      * The console command description.

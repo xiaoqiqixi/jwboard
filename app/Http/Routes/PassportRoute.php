@@ -8,7 +8,8 @@ class PassportRoute
     public function map(Registrar $router)
     {
         $router->group([
-            'prefix' => 'passport'
+            'prefix' => 'passport',
+            'middleware' => 'throttle:30,1'
         ], function ($router) {
             // Auth
             $router->post('/auth/register', 'Passport\\AuthController@register');
@@ -17,6 +18,8 @@ class PassportRoute
             $router->post('/auth/forget', 'Passport\\AuthController@forget');
             $router->post('/auth/getQuickLoginUrl', 'Passport\\AuthController@getQuickLoginUrl');
             $router->post('/auth/loginWithMailLink', 'Passport\\AuthController@loginWithMailLink');
+            $router->get('/telegram/config', 'Passport\\TelegramController@config');
+            $router->post('/telegram/auth', 'Passport\\TelegramController@auth');
             // Comm
             $router->post('/comm/sendEmailVerify', 'Passport\\CommController@sendEmailVerify');
             $router->post('/comm/pv', 'Passport\\CommController@pv');

@@ -34,7 +34,7 @@ class ThemeService
                 abort(500, "{$this->theme}初始化失败");
             }
         } catch (\Exception $e) {
-            abort(500, '请检查V2Board目录权限');
+            abort(500, '请检查JWBoard目录权限');
         }
 
         try {

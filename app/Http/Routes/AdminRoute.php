@@ -55,6 +55,16 @@ class AdminRoute
                 $router->post('sort', 'Admin\\Server\\VmessController@sort');
             });
             $router->group([
+                'prefix' => 'server/vless'
+            ], function ($router) {
+                $router->get('fetch', 'Admin\\Server\\VlessController@fetch');
+                $router->post('save', 'Admin\\Server\\VlessController@save');
+                $router->post('drop', 'Admin\\Server\\VlessController@drop');
+                $router->post('update', 'Admin\\Server\\VlessController@update');
+                $router->post('copy', 'Admin\\Server\\VlessController@copy');
+                $router->post('sort', 'Admin\\Server\\VlessController@sort');
+            });
+            $router->group([
                 'prefix' => 'server/shadowsocks'
             ], function ($router) {
                 $router->get ('fetch', 'Admin\\Server\\ShadowsocksController@fetch');

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\ServerGroup;
 use App\Models\ServerVmess;
+use App\Models\ServerVless;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\Ticket;
@@ -171,7 +172,8 @@ class StatController extends Controller
             'shadowsocks' => ServerShadowsocks::where('parent_id', null)->get()->toArray(),
             'v2ray' => ServerVmess::where('parent_id', null)->get()->toArray(),
             'trojan' => ServerTrojan::where('parent_id', null)->get()->toArray(),
-            'vmess' => ServerVmess::where('parent_id', null)->get()->toArray()
+            'vmess' => ServerVmess::where('parent_id', null)->get()->toArray(),
+            'vless' => ServerVless::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
         $endAt = strtotime(date('Y-m-d'));
@@ -222,4 +224,3 @@ class StatController extends Controller
     }
 
 }
-

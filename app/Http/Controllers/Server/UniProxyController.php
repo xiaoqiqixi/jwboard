@@ -7,6 +7,7 @@ use App\Services\StatisticalService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
+use App\Utils\Vless;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\ServerShadowsocks;
@@ -27,7 +28,7 @@ class UniProxyController extends Controller
         if (empty($token)) {
             abort(500, 'token is null');
         }
-        if ($token !== config('v2board.server_token')) {
+        if (!hash_equals((string) config('v2board.server_token'), (string) $token)) {
             abort(500, 'token is error');
         }
         $this->nodeType = $request->input('node_type');
@@ -97,6 +98,9 @@ class UniProxyController extends Controller
                     'networkSettings' => $this->nodeInfo->networkSettings,
                     'tls' => $this->nodeInfo->tls
                 ];
+                break;
+            case 'vless':
+                $response = Vless::uniProxyConfig($this->nodeInfo->toArray());
                 break;
             case 'trojan':
                 $response = [

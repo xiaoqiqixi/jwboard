@@ -1,0 +1,28 @@
+{
+  "name": "nova",
+  "description": "Nova - a compact, technology-forward JWBoard storefront theme",
+  "version": "1.0.0",
+  "configs": [
+    {
+      "label": "品牌强调色",
+      "placeholder": "选择强调色",
+      "field_name": "accent_color",
+      "field_type": "select",
+      "select_options": {"cyan": "青蓝", "violet": "紫色", "emerald": "翡翠绿"},
+      "default_value": "cyan"
+    },
+    {
+      "label": "公告栏文案",
+      "placeholder": "可留空",
+      "field_name": "announcement",
+      "field_type": "input",
+      "default_value": "稳定、安全、按需使用"
+    },
+    {
+      "label": "自定义页脚 HTML",
+      "placeholder": "客服脚本或备案信息",
+      "field_name": "custom_html",
+      "field_type": "textarea"
+    }
+  ]
+}
