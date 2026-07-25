@@ -1,6 +1,6 @@
 # JWBoard
 
-当前正式版本：`JWBoard 1.0.0`（发布标签：`jwboard1.0`）
+当前正式版本：`JWBoard 1.0.1`（发布标签：`jwboard1.0.1`；首发版本标签为 `jwboard1.0`）
 
 JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台、VLESS、Cloudflare Turnstile、Telegram 一键注册/登录与 V2bX 适配。
 
@@ -28,7 +28,7 @@ JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台
 
 不要把项目根目录设为网站运行目录。
 
-### 2. 从 GitHub 获取 JWBoard 1.0
+### 2. 从 GitHub 获取当前正式版
 
 使用 SSH 登录服务器，逐行执行：
 
@@ -36,9 +36,11 @@ JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台
 cd /www/wwwroot
 git clone https://github.com/xiaoqiqixi/jwboard.git
 cd jwboard
-git checkout jwboard1.0
+cat VERSION
 PHP_BIN=/www/server/php/74/bin/php ./init.sh
 ```
+
+如需安装首发 `JWBoard 1.0.0`，才执行 `git checkout jwboard1.0`；正常新安装始终使用 `main` 的当前正式版本。
 
 首次安装前不要创建 `.env`，也不要手工执行 `composer update`。`init.sh` 会：
 
@@ -126,18 +128,60 @@ https://你的域名/#/register?code=邀请码
 
 VLESS、Reality、V2bX、Telegram 的完整字段说明分别位于仓库文件：`docs/VLESS.md`、`docs/V2BX_VLESS.md`、`docs/TELEGRAM_LOGIN.md`。
 
-## 后续更新：只运行更新脚本
+## 后续更新：完整手把手教程
 
-首次安装完成并正常运行后，以后不要重新 clone、不要覆盖 `.env`，只执行：
+首次安装完成并正常运行后，不要重新 clone、不要覆盖 `.env`。每次更新按下面顺序操作。
+
+### 1. 查看当前安装状态并备份
+
+```bash
+cd /www/wwwroot/jwboard
+cat VERSION
+git status --short
+```
+
+`git status --short` 没有输出才可以继续。然后备份数据库、`.env`、`storage/` 与 `config/theme/`。确认本地存在 `composer.lock`；该文件由首次 `init.sh` 生成，不能删除。
+
+### 2. 执行统一更新脚本
 
 ```bash
 cd /www/wwwroot/jwboard
 PHP_BIN=/www/server/php/74/bin/php ./update.sh
 ```
 
-更新脚本会检查 PHP 7.4、当前代码是否有本地修改和 `composer.lock`，然后快进拉取 GitHub 的 `main`、执行 `composer install`、数据库兼容更新、配置缓存刷新和 Horizon 重启。它不会执行 `git reset --hard`、不会修改 `.env`、不会执行 `composer update`。
+更新脚本会检查 PHP 7.4、当前代码是否有本地修改和 `composer.lock`，然后快进拉取 GitHub 的 `main`、执行 `composer install`、数据库版本更新、配置缓存刷新和 Horizon 重启。它不会执行 `git reset --hard`、不会修改 `.env`、不会执行 `composer update`。
 
-完整的排错、备份、版本升级和发布规则位于 `docs/UPDATE.md`；每个版本的内容记录在 `CHANGELOG.md`，当前版本文件为 `VERSION`。
+### 3. 不同旧版本如何升级到同一新版本
+
+所有用户都运行同一个 `./update.sh`，不需要自己挑选脚本。脚本会读取数据库表 `v2_jwboard_update_log`，只执行缺少的版本迁移：
+
+| 已部署版本 | 目标版本 | 实际执行的数据库更新 |
+| --- | --- | --- |
+| 1.0.0 | 1.0.2 | 依次执行 `1.0.1.sql`、`1.0.2.sql` |
+| 1.0.1 | 1.0.2 | 只执行 `1.0.2.sql` |
+| 1.0.2 | 1.0.2 | 不重复执行数据库 SQL，只刷新依赖与服务 |
+
+每个版本的 SQL 位于 `database/jwboard-updates/`，更新成功后才写入迁移记录；因此同一个数据库变更不会重复运行。版本发布记录见 `CHANGELOG.md`，代码目标版本见 `VERSION`。
+
+### 4. 更新完成后
+
+在 aaPanel 重启 PHP 7.4 的 PHP-FPM（启用 OPCache 时必须重启），再执行：
+
+```bash
+cat VERSION
+/www/server/php/74/bin/php artisan horizon:status
+```
+
+最后检查首页、后台、登录、订阅、订单与测试节点流量。若更新涉及 VLESS 或 Telegram，用测试用户完成节点拉取、流量回传和 Telegram 登录验证。
+
+### 5. 常见停止原因
+
+- `composer.lock is missing`：服务器未完成首次安装或锁文件被删除。不要运行 `composer update`；恢复首次安装生成的锁文件后重试。
+- `The working tree has local changes`：服务器上改过源代码。先备份并提交自己的改动，不能强制覆盖。
+- `Local history has diverged`：服务器分支与 GitHub 都有各自提交。保留备份，在新目录 clone 后先测试，不要直接强制更新。
+- 数据库迁移失败：查看终端报错；该迁移不会写入完成记录。处理后再次运行同一个 `./update.sh` 即可。
+
+更新教程的独立副本位于 `docs/UPDATE.md`，方便只分发运维文档；README 与该文件遵循相同的更新规则。
 
 ## 上线检查
 
@@ -156,7 +200,7 @@ JWBoard 使用 `主版本.次版本.修订版本`：
 - 修复问题时升级修订版本，例如 `1.0.1`；
 - 破坏现有部署兼容性时才升级主版本，例如 `2.0.0`。
 
-每次发布必须同步更新 `VERSION`、`CHANGELOG.md`、必要的数据库升级逻辑，并创建对应 Git 标签，例如 `jwboard1.0.1`。
+每次发布必须同步更新 `VERSION`、`CHANGELOG.md`、必要的数据库升级 SQL，并创建对应 Git 标签，例如 `jwboard1.0.2`。推送标签时只推送当前标签，例如 `git push origin jwboard1.0.2`，不要使用 `git push --tags`。
 
 ## 许可
 

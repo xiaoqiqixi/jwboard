@@ -34,10 +34,12 @@ PHP_BIN=/www/server/php/74/bin/php ./update.sh
 1. 校验 PHP 7.4、Git、`.env` 与 `composer.lock`；
 2. 从 GitHub 的 `origin/main` 拉取仅可快进的代码；
 3. 按 `composer.lock` 执行 `composer install`，不会改变已锁定依赖版本；
-4. 执行 `jwboard:update`，处理历史数据库更新、VLESS 表和 Telegram 登录索引；
+4. 执行 `jwboard:update`，读取数据库版本记录并按顺序执行缺失的版本迁移；
 5. 刷新配置缓存并通知 Horizon 重启。
 
 脚本不会执行 `git reset --hard`、不会删除 `.env`、不会删除 `composer.lock`、不会执行 `composer update`。
+
+不同旧版本不需要不同脚本。数据库中的 `v2_jwboard_update_log` 会记录每一项成功迁移：1.0.0 升级到 1.0.2 会依次执行 `1.0.1.sql`、`1.0.2.sql`；1.0.1 升级到 1.0.2 只执行 `1.0.2.sql`。SQL 文件位于 `database/jwboard-updates/`，成功后才会记录，失败时修复问题后重跑同一个脚本即可。
 
 ## 更新后检查
 
@@ -80,17 +82,18 @@ HAVING COUNT(*) > 1;
 
 ## 发布新版本（维护者）
 
-假设下一个版本为 `JWBoard 1.0.1`：
+假设下一个版本为 `JWBoard 1.0.2`：
 
-1. 修改 `VERSION` 为 `JWBoard 1.0.1`。
+1. 修改 `VERSION` 为 `JWBoard 1.0.2`。
 2. 在 `CHANGELOG.md` 写明功能、修复、数据库与部署影响。
-3. 将需要自动升级的数据库改动加入 `jwboard:update`，确保重复执行安全。
+3. 将数据库增量 SQL 写入 `database/jwboard-updates/1.0.2.sql`；只写本版本新增的数据库修改，不能写全量建表 SQL。
 4. 在测试环境完整执行 `./init.sh` 与 `./update.sh`。
 5. 提交 `main` 后创建并推送版本标签：
 
    ```bash
-   git tag -a jwboard1.0.1 -m "JWBoard 1.0.1"
-   git push origin main --tags
+   git tag -a jwboard1.0.2 -m "JWBoard 1.0.2"
+   git push origin main
+   git push origin jwboard1.0.2
    ```
 
 生产服务器继续运行 `./update.sh`；它会从当前分支拉取最新版本，并在结束时显示更新前后的版本号。

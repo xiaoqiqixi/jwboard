@@ -87,6 +87,7 @@ class JwboardInstall extends Command
                 }
             }
             $this->info('数据库导入完成');
+            $this->recordInitialVersion();
             $email = '';
             while (!$email) {
                 $email = $this->ask('请输入管理员邮箱?');
@@ -119,6 +120,34 @@ class JwboardInstall extends Command
         $user->token = Helper::guid();
         $user->is_admin = 1;
         return $user->save();
+    }
+
+    private function recordInitialVersion()
+    {
+        $contents = \File::exists(base_path('VERSION')) ? trim(\File::get(base_path('VERSION'))) : '';
+        if (!preg_match('/(\d+\.\d+\.\d+)/', $contents, $matches)) {
+            abort(500, 'VERSION 文件格式错误');
+        }
+
+        DB::table('v2_jwboard_update_log')->insert([
+            'version' => $matches[1],
+            'migration' => 'release',
+            'applied_at' => time()
+        ]);
+
+        foreach (glob(base_path('database/jwboard-updates/*.sql')) ?: [] as $path) {
+            $name = basename($path);
+            if (!preg_match('/^(\d+\.\d+\.\d+)\.sql$/', $name, $migration)) {
+                continue;
+            }
+            if (version_compare($migration[1], $matches[1], '<=')) {
+                DB::table('v2_jwboard_update_log')->insert([
+                    'version' => $migration[1],
+                    'migration' => $name,
+                    'applied_at' => time()
+                ]);
+            }
+        }
     }
 
     private function saveToEnv($data = [])
