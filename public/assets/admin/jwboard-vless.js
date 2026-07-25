@@ -3,88 +3,77 @@
   const root = document.querySelector('#root');
   const securePath = String((window.settings || {}).secure_path || '').replace(/^\/+|\/+$/g, '');
   const endpoint = path => `/${securePath}/server/vless/${path}`;
-  const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const asJson = value => JSON.stringify(value || {}, null, 2);
-  let servers = [], editingServer = {};
+  const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const json = value => JSON.stringify(value || {}, null, 2);
+  let servers = [], timer;
 
-  function isOpen() { return location.hash === '#/server/manage/vless'; }
-  function isManage() { return location.hash === '#/server/manage' || (root && root.textContent.indexOf('节点管理') !== -1); }
   function request(path, options) {
     const headers = {Accept: 'application/json', Authorization: localStorage.getItem('authorization') || ''};
     if (options && options.body) headers['Content-Type'] = 'application/json';
     return fetch(endpoint(path), Object.assign({headers}, options || {})).then(async response => {
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload.code && payload.code !== 200) throw new Error(payload.message || '请求失败');
-      return payload.data;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.code && data.code !== 200) throw new Error(data.message || '请求失败');
+      return data.data;
     });
   }
-  function parseArray(value) {
-    const input = String(value || '').trim();
-    if (!input) return [];
-    if (input[0] === '[') return JSON.parse(input);
-    return input.split(',').map(item => Number(item.trim())).filter(Boolean);
-  }
-  function parseObject(value) { const input = String(value || '').trim(); return input ? JSON.parse(input) : {}; }
-  function form(server) {
-    server = server || {};
+  function isNodePage() { return location.hash === '#/server/manage' || root && root.textContent.indexOf('节点管理') !== -1; }
+  function list(value) { const input = String(value || '').trim(); return input ? input[0] === '[' ? JSON.parse(input) : input.split(',').map(item => Number(item.trim())).filter(Boolean) : []; }
+  function object(value) { return String(value || '').trim() ? JSON.parse(value) : {}; }
+  function closeDrawer() { document.querySelector('#jw-vless-drawer')?.remove(); }
+  function openDrawer(server = {}) {
+    closeDrawer();
     const select = (name, values, selected) => `<select name="${name}">${values.map(([value, label]) => `<option value="${value}" ${String(value) === String(selected) ? 'selected' : ''}>${label}</option>`).join('')}</select>`;
-    return `<section class="jw-vless-card"><h2>${server.id ? '编辑 VLESS 节点' : '新增 VLESS 节点'}</h2><p class="jw-vless-muted">与 VMess、Trojan 位于同一节点管理区；配置保存后由 V2bX 拉取。</p><form id="jw-vless-form"><input type="hidden" name="id" value="${escapeHtml(server.id)}"><div class="jw-vless-grid"><div><div class="jw-vless-field"><label>节点名称</label><input name="name" required value="${escapeHtml(server.name)}"></div><div class="jw-vless-field"><label>主机地址</label><input name="host" required value="${escapeHtml(server.host)}"></div><div class="jw-vless-field"><label>订阅端口</label><input name="port" required value="${escapeHtml(server.port || 443)}"></div><div class="jw-vless-field"><label>Xray 入站端口</label><input name="server_port" type="number" required value="${escapeHtml(server.server_port || 443)}"></div><div class="jw-vless-field"><label>权限组 ID（例如 1,2）</label><input name="group_id" required value="${escapeHtml((server.group_id || [1]).join(','))}"></div><div class="jw-vless-field"><label>路由组 ID（可选）</label><input name="route_id" value="${escapeHtml((server.route_id || []).join(','))}"></div><div class="jw-vless-field"><label>父节点 ID（可选）</label><input name="parent_id" type="number" value="${escapeHtml(server.parent_id)}"></div><div class="jw-vless-field"><label>倍率</label><input name="rate" type="number" min="0" step="0.01" required value="${escapeHtml(server.rate || 1)}"></div></div><div><div class="jw-vless-field"><label>安全层</label>${select('security', [['tls','TLS'],['reality','Reality'],['none','None']], server.security || 'tls')}</div><div class="jw-vless-field"><label>传输协议</label>${select('network', [['tcp','TCP'],['ws','WebSocket'],['grpc','gRPC']], server.network || 'tcp')}</div><div class="jw-vless-field"><label>Flow</label>${select('flow', [['','无'],['xtls-rprx-vision','xtls-rprx-vision'],['xtls-rprx-vision-udp443','xtls-rprx-vision-udp443']], server.flow || '')}</div><div class="jw-vless-field"><label>状态</label>${select('show', [['1','显示'],['0','隐藏']], String(server.show == null ? 1 : server.show))}</div><div class="jw-vless-field"><label>传输设置（JSON）</label><textarea name="networkSettings">${escapeHtml(asJson(server.networkSettings))}</textarea></div><div class="jw-vless-field"><label>TLS 设置（JSON）</label><textarea name="tlsSettings">${escapeHtml(asJson(server.tlsSettings))}</textarea></div><div class="jw-vless-field"><label>Reality 设置（JSON）</label><textarea name="realitySettings">${escapeHtml(asJson(server.realitySettings))}</textarea></div></div></div><div class="jw-vless-actions"><button class="jw-vless-btn primary">保存节点</button><button class="jw-vless-btn" type="button" data-new>新建节点</button></div></form></section>`;
-  }
-  function table() {
-    const rows = servers.length ? servers.map(server => `<tr><td>${escapeHtml(server.name)}</td><td>${escapeHtml(server.host)}:${escapeHtml(server.port)}</td><td>${escapeHtml(server.security)}</td><td>${server.show ? '显示' : '隐藏'}</td><td><button class="jw-vless-btn" data-edit="${server.id}">编辑</button> <button class="jw-vless-btn" data-copy="${server.id}">复制</button> <button class="jw-vless-btn danger" data-drop="${server.id}">删除</button></td></tr>`).join('') : '<tr><td colspan="5" class="jw-vless-muted">尚未创建 VLESS 节点</td></tr>';
-    return `<section class="jw-vless-card"><h2>VLESS 节点</h2><table class="jw-vless-table"><thead><tr><th>名称</th><th>地址</th><th>安全层</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></section>`;
-  }
-  function bind() {
-    const panel = document.querySelector('#jw-vless-admin');
-    if (!panel) return;
-    const configFields = document.createElement('div');
-    configFields.className = 'jw-vless-grid';
-    configFields.innerHTML = `<div class="jw-vless-field"><label>节点标签（逗号分隔，可选）</label><input name="tags" value="${escapeHtml((editingServer.tags || []).join(','))}"></div><div class="jw-vless-field"><label>规则设置（JSON）</label><textarea name="ruleSettings">${escapeHtml(asJson(editingServer.ruleSettings))}</textarea></div><div class="jw-vless-field"><label>DNS 设置（JSON）</label><textarea name="dnsSettings">${escapeHtml(asJson(editingServer.dnsSettings))}</textarea></div>`;
-    panel.querySelector('.jw-vless-actions').before(configFields);
-    panel.querySelector('[data-close]').onclick = () => { location.hash = '#/server/manage'; };
-    panel.querySelector('[data-new]').onclick = () => draw();
-    panel.querySelectorAll('[data-edit]').forEach((button, index) => { button.onclick = () => draw(servers.find(server => String(server.id) === button.dataset.edit)); button.insertAdjacentHTML('afterend', ` <button class="jw-vless-btn" data-move="${button.dataset.edit}" data-offset="-1" ${index ? '' : 'disabled'}>↑</button> <button class="jw-vless-btn" data-move="${button.dataset.edit}" data-offset="1" ${index + 1 < servers.length ? '' : 'disabled'}>↓</button>`); });
-    panel.querySelectorAll('[data-move]').forEach(button => button.onclick = () => move(button.dataset.move, Number(button.dataset.offset)));
-    panel.querySelectorAll('[data-copy]').forEach(button => button.onclick = async () => { await request('copy', {method: 'POST', body: JSON.stringify({id: button.dataset.copy})}); await load(); });
-    panel.querySelectorAll('[data-drop]').forEach(button => button.onclick = async () => { if (confirm('确定删除此 VLESS 节点？')) { await request('drop', {method: 'POST', body: JSON.stringify({id: button.dataset.drop})}); await load(); } });
+    const panel = document.createElement('div');
+    panel.id = 'jw-vless-drawer';
+    panel.innerHTML = `<div class="jw-vless-mask" data-close></div><aside class="jw-vless-panel"><header><h2>${server.id ? '编辑 VLESS 节点' : '新建 VLESS 节点'}</h2><button type="button" data-close>×</button></header><form id="jw-vless-form"><input type="hidden" name="id" value="${esc(server.id)}"><div class="jw-vless-grid"><label>节点名称<input name="name" required value="${esc(server.name)}"></label><label>倍率<input name="rate" type="number" min="0" step="0.01" required value="${esc(server.rate || 1)}"></label><label>主机地址<input name="host" required value="${esc(server.host)}"></label><label>订阅端口<input name="port" required value="${esc(server.port || 443)}"></label><label>Xray 入站端口<input name="server_port" type="number" required value="${esc(server.server_port || 443)}"></label><label>权限组 ID（例如 1,2）<input name="group_id" required value="${esc((server.group_id || [1]).join(','))}"></label><label>路由组 ID（可选）<input name="route_id" value="${esc((server.route_id || []).join(','))}"></label><label>父节点 ID（可选）<input name="parent_id" type="number" value="${esc(server.parent_id)}"></label><label>安全层${select('security', [['tls','TLS'],['reality','Reality'],['none','None']], server.security || 'tls')}</label><label>传输协议${select('network', [['tcp','TCP'],['ws','WebSocket'],['grpc','gRPC']], server.network || 'tcp')}</label><label>Flow${select('flow', [['','无'],['xtls-rprx-vision','xtls-rprx-vision'],['xtls-rprx-vision-udp443','xtls-rprx-vision-udp443']], server.flow || '')}</label><label>显示状态${select('show', [['1','显示'],['0','隐藏']], server.show == null ? '1' : server.show)}</label></div><label>节点标签（逗号分隔）<input name="tags" value="${esc((server.tags || []).join(','))}"></label><label>传输设置（JSON）<textarea name="networkSettings">${esc(json(server.networkSettings))}</textarea></label><label>TLS 设置（JSON）<textarea name="tlsSettings">${esc(json(server.tlsSettings))}</textarea></label><label>Reality 设置（JSON）<textarea name="realitySettings">${esc(json(server.realitySettings))}</textarea></label><label>规则设置（JSON）<textarea name="ruleSettings">${esc(json(server.ruleSettings))}</textarea></label><label>DNS 设置（JSON）<textarea name="dnsSettings">${esc(json(server.dnsSettings))}</textarea></label><p class="jw-vless-error" aria-live="polite"></p><footer><button type="button" data-close>取消</button><button class="primary">保存</button></footer></form></aside>`;
+    document.body.append(panel);
+    panel.querySelectorAll('[data-close]').forEach(button => button.onclick = closeDrawer);
     panel.querySelector('#jw-vless-form').onsubmit = async event => {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget));
       try {
-        data.group_id = parseArray(data.group_id); data.route_id = parseArray(data.route_id);
-        data.tags = String(data.tags || '').split(',').map(item => item.trim()).filter(Boolean);
-        ['networkSettings', 'tlsSettings', 'realitySettings', 'ruleSettings', 'dnsSettings'].forEach(name => data[name] = parseObject(data[name]));
+        data.group_id = list(data.group_id); data.route_id = list(data.route_id); data.tags = String(data.tags || '').split(',').map(tag => tag.trim()).filter(Boolean);
+        ['networkSettings', 'tlsSettings', 'realitySettings', 'ruleSettings', 'dnsSettings'].forEach(key => data[key] = object(data[key]));
         if (!data.id) delete data.id; if (!data.parent_id) delete data.parent_id;
-        await request('save', {method: 'POST', body: JSON.stringify(data)}); await load();
-      } catch (error) { showError(error.message === 'Unexpected end of JSON input' ? 'JSON 设置格式不正确' : error.message); }
+        await request('save', {method: 'POST', body: JSON.stringify(data)}); closeDrawer(); refresh(true);
+      } catch (error) { panel.querySelector('.jw-vless-error').textContent = error.message === 'Unexpected end of JSON input' ? 'JSON 设置格式不正确' : error.message; }
     };
   }
-  async function move(id, offset) {
-    const ids = servers.map(server => server.id), index = ids.indexOf(Number(id)), target = index + offset;
-    if (index < 0 || target < 0 || target >= ids.length) return;
-    [ids[index], ids[target]] = [ids[target], ids[index]];
-    await request('sort', {method: 'POST', body: JSON.stringify({ids})}); await load();
+  function addMenuItem(menu) {
+    if (menu.dataset.jwVless || !/VMess/.test(menu.textContent)) return;
+    menu.dataset.jwVless = '1';
+    const vmess = Array.from(menu.children).find(item => /VMess/.test(item.textContent));
+    const item = document.createElement('li');
+    item.className = vmess?.className || 'ant-dropdown-menu-item';
+    item.innerHTML = '<span class="ant-tag jw-vless-tag">VLESS</span>';
+    item.onclick = event => { event.preventDefault(); event.stopPropagation(); openDrawer(); };
+    if (vmess) vmess.after(item); else menu.append(item);
   }
-  function showError(message) { const el = document.querySelector('#jw-vless-error'); if (el) el.textContent = message; }
-  function draw(selected) {
-    if (!isOpen()) return;
-    editingServer = selected || {};
-    let panel = document.querySelector('#jw-vless-admin');
-    if (!panel) { panel = document.createElement('div'); panel.id = 'jw-vless-admin'; document.body.append(panel); }
-    panel.innerHTML = `<div class="jw-vless-wrap"><header class="jw-vless-head"><div><h1>节点管理 / VLESS</h1><p>与 VMess、Trojan 使用相同的管理员权限和节点管理入口。</p></div><button class="jw-vless-btn" data-close>返回节点管理</button></header><p id="jw-vless-error" class="jw-vless-error"></p>${form(selected)}${table()}</div>`;
-    bind();
+  function decorateRows() {
+    document.querySelectorAll('.ant-dropdown-menu').forEach(addMenuItem);
+    if (!isNodePage()) return;
+    document.querySelectorAll('.ant-table-tbody tr, .v2board_node_mobile').forEach(row => {
+      const server = servers.find(item => row.textContent.indexOf(item.name) !== -1 && row.textContent.indexOf(item.host) !== -1);
+      if (!server || row.dataset.jwVless === String(server.id)) return;
+      row.dataset.jwVless = String(server.id);
+      const cells = row.querySelectorAll('td');
+      if (cells.length) {
+        cells[0].innerHTML = `<span class="ant-tag jw-vless-tag">VLESS</span> ${server.parent_id ? `${server.id} => ${server.parent_id}` : server.id}`;
+        if (cells[1]) cells[1].innerHTML = `<button class="jw-vless-switch ${Number(server.show) ? 'on' : ''}" aria-label="切换显示状态"></button>`;
+        const actions = cells[cells.length - 1];
+        actions.innerHTML = '<a data-vless-edit>编辑</a><span class="ant-divider ant-divider-vertical"></span><a data-vless-copy>复制</a><span class="ant-divider ant-divider-vertical"></span><a class="jw-vless-delete" data-vless-drop>删除</a>';
+        actions.querySelector('[data-vless-edit]').onclick = () => openDrawer(server);
+        actions.querySelector('[data-vless-copy]').onclick = async () => { await request('copy', {method: 'POST', body: JSON.stringify({id: server.id})}); refresh(true); };
+        actions.querySelector('[data-vless-drop]').onclick = async () => { if (confirm('确定删除此 VLESS 节点？')) { await request('drop', {method: 'POST', body: JSON.stringify({id: server.id})}); refresh(true); } };
+        cells[1]?.querySelector('button').addEventListener('click', async () => { await request('update', {method: 'POST', body: JSON.stringify({id: server.id, show: Number(server.show) ? 0 : 1})}); refresh(true); });
+      }
+    });
   }
-  async function load(selected) { draw(selected); try { servers = await request('fetch'); draw(selected); } catch (error) { showError(error.message); } }
-  function sync() {
-    const launch = document.querySelector('#jw-vless-launch');
-    const panel = document.querySelector('#jw-vless-admin');
-    if (isOpen()) { if (launch) launch.remove(); if (!panel) load(); return; }
-    if (panel) panel.remove();
-    if (isManage() && !launch) {
-      const button = document.createElement('button'); button.id = 'jw-vless-launch'; button.textContent = 'VLESS 节点'; button.onclick = () => { location.hash = '#/server/manage/vless'; }; document.body.append(button);
-    } else if (!isManage() && launch) launch.remove();
+  async function refresh(reload) {
+    if (!isNodePage()) return;
+    try { servers = await request('fetch'); decorateRows(); if (reload) setTimeout(() => location.reload(), 120); } catch (_) {}
   }
-  window.addEventListener('hashchange', sync);
-  new MutationObserver(sync).observe(root, {childList: true, subtree: true});
-  sync();
+  function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 120); }
+  new MutationObserver(schedule).observe(document.body, {childList: true, subtree: true});
+  window.addEventListener('hashchange', schedule); schedule();
 })();

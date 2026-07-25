@@ -1,5 +1,10 @@
 # JWBoard 版本记录
 
+## JWBoard 1.0.3 — 2026-07-25
+
+- 修正 VLESS 管理端集成方式：在“节点管理”的新增协议下拉菜单中与 Shadowsocks、VMess、Trojan、Hysteria 并列。
+- VLESS 节点保留在统一节点列表中，支持同表显示标签、显隐、编辑、复制和删除；不再显示独立页面或浮动入口。
+
 ## JWBoard 1.0.2 — 2026-07-25
 
 - VLESS 节点配置从 Nova 用户前台完全移除，改为后台“节点管理”中的专用入口，与 VMess、Trojan 同属节点管理。

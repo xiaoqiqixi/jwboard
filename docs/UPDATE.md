@@ -35,7 +35,7 @@ PHP_BIN=/www/server/php/74/bin/php ./update.sh
 
 脚本不依赖 Git 仓库、不会执行 `git reset --hard`、不会删除 `.env`、不会执行 `composer update`。
 
-不同旧版本不需要不同脚本。数据库中的 `v2_jwboard_update_log` 会记录每一项成功迁移：1.0.0 升级到 1.0.2 会依次执行 `1.0.1.sql`、`1.0.2.sql`；1.0.1 升级到 1.0.2 只执行 `1.0.2.sql`。SQL 文件位于 `database/jwboard-updates/`，成功后才会记录，失败时修复问题后重跑同一个脚本即可。
+不同旧版本不需要不同脚本。数据库中的 `v2_jwboard_update_log` 会记录每一项成功迁移：1.0.0 升级到 1.0.3 会依次执行 `1.0.1.sql`、`1.0.2.sql`、`1.0.3.sql`；1.0.2 升级到 1.0.3 只执行 `1.0.3.sql`。SQL 文件位于 `database/jwboard-updates/`，成功后才会记录，失败时修复问题后重跑同一个脚本即可。
 
 ## 更新后检查
 
@@ -74,19 +74,19 @@ HAVING COUNT(*) > 1;
 
 ## 发布新版本（维护者）
 
-假设下一个版本为 `JWBoard 1.0.2`：
+假设下一个版本为 `JWBoard 1.0.4`：
 
-1. 修改 `VERSION` 为 `JWBoard 1.0.2`。
+1. 修改 `VERSION` 为 `JWBoard 1.0.4`。
 2. 在 `CHANGELOG.md` 写明功能、修复、数据库与部署影响。
-3. 将数据库增量 SQL 写入 `database/jwboard-updates/1.0.2.sql`；只写本版本新增的数据库修改，不能写全量建表 SQL。
+3. 将数据库增量 SQL 写入 `database/jwboard-updates/1.0.4.sql`；只写本版本新增的数据库修改，不能写全量建表 SQL。
 4. 在测试环境完整执行 `./init.sh` 与从 Release 下载的 `update.sh`。
 5. 提交 `main` 后创建并推送版本标签，再创建 GitHub Release：
 
    ```bash
-   git tag -a jwboard1.0.2 -m "JWBoard 1.0.2"
+   git tag -a jwboard1.0.4 -m "JWBoard 1.0.4"
    git push origin main
-   git push origin jwboard1.0.2
-   gh release create jwboard1.0.2 --title "JWBoard 1.0.2" --notes-file CHANGELOG.md update.sh#update.sh
+   git push origin jwboard1.0.4
+   gh release create jwboard1.0.4 --title "JWBoard 1.0.4" --notes-file CHANGELOG.md update.sh#update.sh
    ```
 
 Release 正文必须写明新增、修复、数据库影响和部署注意事项。生产服务器继续运行 Release 下载的 `./update.sh`；它会显示更新前后的版本号。
