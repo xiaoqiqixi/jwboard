@@ -1,0 +1,6 @@
+/* Keep the visual language, but avoid compositing every card and button on each frame. */
+body{background:linear-gradient(145deg,#07111f,#0a1728 58%,#07111f)}
+.topbar{backdrop-filter:none;background:#091629}.card,.modal,.toast{box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.btn,.nav button,.side button,.text-btn{transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease}.btn:hover{filter:none;transform:none}
+@media(max-width:800px){.topbar{position:relative}.side{background:#0b1b2f;box-shadow:none}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

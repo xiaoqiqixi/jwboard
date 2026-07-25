@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="dark">
   <title>{{ $title }}</title>
   <link rel="stylesheet" href="/theme/{{ $theme }}/assets/nova.css?v={{ $version }}">
+  <link rel="stylesheet" href="/theme/{{ $theme }}/assets/nova-performance.css?v={{ $version }}">
 </head>
 <body data-accent="{{ $theme_config['accent_color'] ?? 'cyan' }}">
   <div id="app" aria-live="polite"></div>

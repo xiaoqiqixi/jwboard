@@ -1,6 +1,6 @@
 # JWBoard
 
-当前正式版本：`JWBoard 1.0.1`（发布标签：`jwboard1.0.1`；首发版本标签为 `jwboard1.0`）
+当前正式版本：`JWBoard 1.0.2`（发布标签：`jwboard1.0.2`；首发版本标签为 `jwboard1.0`）
 
 JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台、VLESS、Cloudflare Turnstile、Telegram 一键注册/登录与 V2bX 适配。
 
