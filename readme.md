@@ -4,7 +4,7 @@
 
 JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台、VLESS、Cloudflare Turnstile、Telegram 一键注册/登录与 V2bX 适配。
 
-## 先看这里
+## 环境要求与安全注意事项
 
 - 固定使用 **PHP 7.4**，不要升级 PHP 8。
 - 支持 **MySQL 5.6+**，无需升级数据库版本。
@@ -14,9 +14,9 @@ JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台
 
 不要公开 Redis、MySQL、`.env`、`SERVER_TOKEN`、Reality 私钥或用户订阅链接。
 
-## 第一次安装：手把手操作
+## 安装
 
-### 1. aaPanel 准备环境
+### aaPanel 环境
 
 在 aaPanel 安装 Nginx、MySQL 5.6、PHP 7.4、Redis、Supervisor。创建站点与独立数据库用户，申请 HTTPS 证书。
 
@@ -28,9 +28,9 @@ JWBoard 是面向商业化运营的代理服务管理面板，包含 Nova 前台
 
 不要把项目根目录设为网站运行目录。
 
-### 2. 从 GitHub 获取当前正式版
+### 获取并初始化项目
 
-使用 SSH 登录服务器，逐行执行：
+在服务器项目目录执行：
 
 ```bash
 cd /www/wwwroot
@@ -52,7 +52,7 @@ PHP_BIN=/www/server/php/74/bin/php ./init.sh
 
 安装完成后记下终端显示的管理员密码；首次安装在服务器本地生成的 `composer.lock` 必须保留，之后更新不能删除它。
 
-### 3. 配置 Nginx
+### Nginx 配置
 
 aaPanel → 网站 → 目标站点 → URL 重写，填写：
 
@@ -70,7 +70,7 @@ location ^~ /theme/nova/assets/ {
 
 在站点设置中开启强制 HTTPS。
 
-### 4. 配置队列与定时任务
+### 队列与定时任务
 
 aaPanel → Cron → Shell Script，设置为每分钟执行一次：
 
@@ -128,11 +128,11 @@ https://你的域名/#/register?code=邀请码
 
 VLESS、Reality、V2bX、Telegram 的完整字段说明分别位于仓库文件：`docs/VLESS.md`、`docs/V2BX_VLESS.md`、`docs/TELEGRAM_LOGIN.md`。
 
-## 后续更新：完整手把手教程
+## 更新
 
 首次安装完成并正常运行后，不要重新 clone、不要覆盖 `.env`。每次更新按下面顺序操作。
 
-### 1. 查看当前安装状态并备份
+### 更新前检查与备份
 
 ```bash
 cd /www/wwwroot/jwboard
@@ -142,7 +142,7 @@ git status --short
 
 `git status --short` 没有输出才可以继续。然后备份数据库、`.env`、`storage/` 与 `config/theme/`。确认本地存在 `composer.lock`；该文件由首次 `init.sh` 生成，不能删除。
 
-### 2. 执行统一更新脚本
+### 执行更新
 
 ```bash
 cd /www/wwwroot/jwboard
@@ -151,7 +151,7 @@ PHP_BIN=/www/server/php/74/bin/php ./update.sh
 
 更新脚本会检查 PHP 7.4、当前代码是否有本地修改和 `composer.lock`，然后快进拉取 GitHub 的 `main`、执行 `composer install`、数据库版本更新、配置缓存刷新和 Horizon 重启。它不会执行 `git reset --hard`、不会修改 `.env`、不会执行 `composer update`。
 
-### 3. 不同旧版本如何升级到同一新版本
+### 版本迁移规则
 
 所有用户都运行同一个 `./update.sh`，不需要自己挑选脚本。脚本会读取数据库表 `v2_jwboard_update_log`，只执行缺少的版本迁移：
 
@@ -163,7 +163,7 @@ PHP_BIN=/www/server/php/74/bin/php ./update.sh
 
 每个版本的 SQL 位于 `database/jwboard-updates/`，更新成功后才写入迁移记录；因此同一个数据库变更不会重复运行。版本发布记录见 `CHANGELOG.md`，代码目标版本见 `VERSION`。
 
-### 4. 更新完成后
+### 更新后检查
 
 在 aaPanel 重启 PHP 7.4 的 PHP-FPM（启用 OPCache 时必须重启），再执行：
 
@@ -174,7 +174,7 @@ cat VERSION
 
 最后检查首页、后台、登录、订阅、订单与测试节点流量。若更新涉及 VLESS 或 Telegram，用测试用户完成节点拉取、流量回传和 Telegram 登录验证。
 
-### 5. 常见停止原因
+### 常见停止原因
 
 - `composer.lock is missing`：服务器未完成首次安装或锁文件被删除。不要运行 `composer update`；恢复首次安装生成的锁文件后重试。
 - `The working tree has local changes`：服务器上改过源代码。先备份并提交自己的改动，不能强制覆盖。
