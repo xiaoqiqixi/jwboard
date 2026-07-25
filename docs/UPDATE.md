@@ -1,42 +1,74 @@
-# JWBoard Git 更新手册
+# JWBoard 更新教程
 
-## 更新前
+本文件只说明已部署 JWBoard 的更新流程。首次安装请按仓库根目录 `readme.md` 操作。
 
-1. 备份数据库与站点的 `.env`、`storage/`、`config/theme/`。
-2. 确认当前代码没有未提交修改：`git status --short` 应为空。自行开发的改动请先提交到单独分支，或先完成备份。
-3. 确认系统仍使用 PHP 7.4；JWBoard 保持与 MySQL 5.6 兼容。
-4. 确认仓库中有已提交的 `composer.lock`。锁文件缺失时，脚本会拒绝更新，以免服务器重新解析依赖版本。
+## 更新前必须确认
 
-## 正常更新
+1. 当前版本：
+
+   ```bash
+   cd /www/wwwroot/jwboard
+   cat VERSION
+   ```
+
+2. 备份数据库、`.env`、`storage/` 与 `config/theme/`。
+3. 使用 PHP 7.4；不要使用系统默认的其他 PHP 版本。
+4. `composer.lock` 存在。它由首次 `init.sh` 生成，不能删除。
+5. 没有未提交的源代码改动：
+
+   ```bash
+   git status --short
+   ```
+
+   没有输出才可继续。若你修改过代码，先提交到自己的分支或完成备份。
+
+## 标准更新：逐行执行
 
 ```bash
-cd /www/wwwroot/your-site
+cd /www/wwwroot/jwboard
 PHP_BIN=/www/server/php/74/bin/php ./update.sh
 ```
 
-脚本会从 `origin` 当前分支快进更新、按 `composer.lock` 安装依赖、执行 `jwboard:update`，并刷新 Laravel 配置缓存与 Horizon。它不会：
+脚本会自动完成以下动作：
 
-- `git reset --hard` 或删除你的 `.env`；
-- 删除 `composer.lock`；
-- 执行会改变依赖版本的 `composer update`；
-- 递归修改整个项目的文件所有者。
+1. 校验 PHP 7.4、Git、`.env` 与 `composer.lock`；
+2. 从 GitHub 的 `origin/main` 拉取仅可快进的代码；
+3. 按 `composer.lock` 执行 `composer install`，不会改变已锁定依赖版本；
+4. 执行 `jwboard:update`，处理历史数据库更新、VLESS 表和 Telegram 登录索引；
+5. 刷新配置缓存并通知 Horizon 重启。
 
-如果远程分支不是默认分支，可指定：
+脚本不会执行 `git reset --hard`、不会删除 `.env`、不会删除 `composer.lock`、不会执行 `composer update`。
 
-```bash
-JWBOARD_BRANCH=main PHP_BIN=/www/server/php/74/bin/php ./update.sh
-```
+## 更新后检查
 
-如果 Git remote 名称不是 `origin`，同时指定 `JWBOARD_REMOTE`。
+1. aaPanel 重启 PHP 7.4 的 PHP-FPM，启用 OPCache 时必须执行。
+2. 检查当前版本：
 
-## 数据库更新内容
+   ```bash
+   cat VERSION
+   /www/server/php/74/bin/php artisan horizon:status
+   ```
 
-`jwboard:update` 会保留历史升级 SQL 的兼容行为，并额外确保：
+3. 访问首页、登录页和后台，使用测试账号验证订阅与订单。
+4. 若本次版本涉及节点变更，使用测试 V2bX 节点验证用户拉取与流量回传。
 
-- VLESS 节点表 `v2_server_vless` 存在；
-- `v2_user.telegram_id` 存在且有唯一索引，供 Telegram 一键登录使用。
+## 常见停止原因
 
-若数据库中已有重复的非空 `telegram_id`，唯一索引无法创建。此时先查询并处理重复数据，再重试：
+### `composer.lock is missing`
+
+说明该服务器没有完成首次安装，或锁文件被删除。不要执行 `composer update`。恢复首次安装生成的 `composer.lock` 后重试；无备份时先在测试环境用 PHP 7.4 重新执行依赖安装并验证，再把生成的锁文件带回生产环境。
+
+### `The working tree has local changes`
+
+说明服务器内改过代码。先执行 `git status --short` 找到文件；将本地修改提交到独立分支，或备份后恢复为由 Git 管理的版本，再更新。不要通过删除 `.env` 或 `git reset --hard` 解决。
+
+### `Local history has diverged`
+
+说明服务器分支与 GitHub 主分支各自都有提交。保留当前目录和数据库备份，创建新目录重新 clone 当前版本，在测试环境确认后再切换；不要强制覆盖生产代码。
+
+### Telegram 唯一索引创建失败
+
+先查询并处理重复绑定，再重试：
 
 ```sql
 SELECT telegram_id, COUNT(*) AS count
@@ -46,8 +78,23 @@ GROUP BY telegram_id
 HAVING COUNT(*) > 1;
 ```
 
-## 更新后
+## 发布新版本（维护者）
 
-在 aaPanel 重启 PHP 7.4 的 PHP-FPM 服务（尤其启用了 OPCache 时），然后访问站点和后台确认服务正常。队列由 Horizon 管理，确保 aaPanel 的守护进程或 Supervisor 仍在运行。
+假设下一个版本为 `JWBoard 1.0.1`：
 
-> `config('v2board.*')` 与 `config/v2board.php` 是为既有部署保留的内部配置键；它们不是对外品牌。请不要为改名而删除或改名这两个内部兼容项。
+1. 修改 `VERSION` 为 `JWBoard 1.0.1`。
+2. 在 `CHANGELOG.md` 写明功能、修复、数据库与部署影响。
+3. 将需要自动升级的数据库改动加入 `jwboard:update`，确保重复执行安全。
+4. 在测试环境完整执行 `./init.sh` 与 `./update.sh`。
+5. 提交 `main` 后创建并推送版本标签：
+
+   ```bash
+   git tag -a jwboard1.0.1 -m "JWBoard 1.0.1"
+   git push origin main --tags
+   ```
+
+生产服务器继续运行 `./update.sh`；它会从当前分支拉取最新版本，并在结束时显示更新前后的版本号。
+
+## 内部兼容项
+
+`config('v2board.*')` 与 `config/v2board.php` 是为既有部署保留的内部配置键，不是对外品牌。不要为了改名而删除或改名它们。

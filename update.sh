@@ -16,6 +16,14 @@ fail() {
   exit 1
 }
 
+read_version() {
+  if [ -s "$APP_DIR/VERSION" ]; then
+    tr -d '\r\n' < "$APP_DIR/VERSION"
+  else
+    echo "JWBoard (unknown version)"
+  fi
+}
+
 command -v git >/dev/null 2>&1 || fail "Git is not installed."
 command -v "$PHP_BIN" >/dev/null 2>&1 || fail "PHP executable not found: $PHP_BIN"
 
@@ -23,6 +31,9 @@ command -v "$PHP_BIN" >/dev/null 2>&1 || fail "PHP executable not found: $PHP_BI
 [ -d .git ] || fail "This updater requires a Git checkout."
 [ -f .env ] || fail ".env is missing; refusing to update an unconfigured installation."
 [ -f composer.lock ] || fail "composer.lock is missing; refusing an update that could change dependency versions."
+
+VERSION_BEFORE="$(read_version)"
+echo "Current version: ${VERSION_BEFORE}"
 
 PHP_VERSION_ID="$($PHP_BIN -r 'echo PHP_VERSION_ID;')"
 if [ "$PHP_VERSION_ID" -lt 70400 ] || [ "$PHP_VERSION_ID" -ge 80000 ]; then
@@ -73,4 +84,6 @@ echo "Applying JWBoard schema updates..."
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan horizon:terminate || true
 
-echo "JWBoard update completed. Restart PHP-FPM from aaPanel if OPCache is enabled."
+VERSION_AFTER="$(read_version)"
+echo "JWBoard update completed: ${VERSION_BEFORE} -> ${VERSION_AFTER}"
+echo "Restart PHP-FPM from aaPanel if OPCache is enabled."

@@ -5,6 +5,7 @@ set -Eeuo pipefail
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 PHP_BIN="${PHP_BIN:-php}"
 COMPOSER_BIN="${COMPOSER_BIN:-composer}"
+VERSION="$(tr -d '\r\n' < "$APP_DIR/VERSION" 2>/dev/null || echo 'JWBoard')"
 
 cd "$APP_DIR"
 
@@ -43,7 +44,7 @@ else
   fi
 fi
 
-echo "Installing PHP 7.4-compatible dependencies…"
+echo "Installing ${VERSION} with PHP 7.4-compatible dependencies…"
 "$PHP_BIN" "$COMPOSER_PATH" install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
 if [ ! -f "$APP_DIR/vendor/autoload.php" ]; then
